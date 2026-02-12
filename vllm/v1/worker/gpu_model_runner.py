@@ -4674,7 +4674,18 @@ class GPUModelRunner(
         # Set num_scheduled_tokens based on num_tokens and max_num_seqs
         # for dummy run with LoRA so that the num_reqs collectively
         # has num_tokens in total.
-        assert num_tokens <= self.scheduler_config.max_num_batched_tokens
+        max_dummy_run_tokens = self.scheduler_config.max_num_batched_tokens
+        if (
+            self.speculative_config is not None
+            and self.speculative_config.parallel_drafting
+        ):
+            # For parallel speculative decoding, the compile range is extended
+            # beyond max_num_batched_tokens to accommodate draft tokens.
+            max_dummy_run_tokens += (
+                self.speculative_config.num_speculative_tokens
+                * self.scheduler_config.max_num_seqs
+            )
+        assert num_tokens <= max_dummy_run_tokens
         max_num_reqs = self.scheduler_config.max_num_seqs
         if create_mixed_batch:
             assert not uniform_decode
